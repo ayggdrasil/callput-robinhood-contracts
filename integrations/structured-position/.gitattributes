@@ -1,0 +1,3 @@
+# Unified diff context contains a literal space on empty context lines.
+# Preserve the canonical patch bytes when checking this package's own diff.
+host-integration.patch -whitespace

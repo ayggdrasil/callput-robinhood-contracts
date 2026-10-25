@@ -1,0 +1,729 @@
+diff --git a/frontend/.env.example b/frontend/.env.example
+index ef7bf982..f71e11fb 100644
+--- a/frontend/.env.example
++++ b/frontend/.env.example
+@@ -62,5 +62,7 @@ VITE_MARKET_DAILY_API=
+ 
+ # ── 로컬 개발 전용 → .env.local (dev 서버가 /v1 relay 요청을 이 주소로 프록시, 빌드는 안 읽음)
+ # VITE_DEV_RELAY_ORIGIN=https://giwa.callput.app
++# Robinhood wallet-funded local QA only (Vite serve + localhost/127.0.0.1).
++# VITE_DEV_ROBINHOOD_WALLET_TRADING=1
+ # 개발용 RPC 키(callput-dev, docs/20261016-rpc-keys)는 .env.dev.local 에만: dev 모드만 읽는다.
+ # .env.local 은 운영 빌드를 포함한 모든 모드가 읽어서, 거기 넣으면 개발 키가 운영 번들에 들어간다.
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index f51cdefa..f2b8c51e 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -52,6 +52,7 @@ import ToastContainer from "./components/Common/ToastContainer";
+ import ReferralHandler from "./components/Common/ReferralHandler";
+ import { isRewardsEnabled } from "./networks/rewards";
+ import { LANDING_PATH } from "./networks/configs";
++import {stockIncomeEnabled, STOCK_INCOME_ROUTE} from './networks/stockIncome';
+ import { START_WEBSOCKET, STOP_WEBSOCKET } from "./store/actions/actionTypes";
+ import PopupHandler from "./components/Common/PopupHandler";
+ import NavBar from "./components/NavBar/NavBar";
+@@ -86,6 +87,7 @@ import TransferPageSkeleton from './components/Transfer/TransferPageSkeleton';
+ const TradingV2 = lazy(() => import("./pages/TradingV2"));
+ const SimpleOptions = lazy(() => import("./pages/SimpleOptions"));
+ const Pools = lazy(() => import("./pages/Pools"));
++const Structure = lazy(() => import('./pages/Structure'));
+ const Rewards = lazy(() => import("./pages/Rewards"));
+ const PublicSeoPage = lazy(() => import("./pages/PublicSeoPage"));
+ // Hidden ops page — URL-reachable (/transfer) but intentionally absent from
+@@ -294,7 +296,7 @@ function MainContent({
+   // pages adapt via Tailwind breakpoints; no MobileNotSupported gate).
+   return (
+     <>
+-      <NavBar />
++      {normalizedPath !== STOCK_INCOME_ROUTE || !stockIncomeEnabled(chain) ? <NavBar /> : null}
+       <AnnouncementBarManager
+         announcements={announcements}
+         handleCloseAnnouncement={handleCloseAnnouncement}
+@@ -333,6 +335,7 @@ function MainContent({
+               element={<Pools announcementsLen={announcements.length} />}
+             />
+             <Route path="/transfer" element={<Transfer />} />
++            {stockIncomeEnabled(chain) && <Route path={STOCK_INCOME_ROUTE} element={<Structure announcementsLen={announcements.length} />} />}
+             {isRewardsEnabled(chain) && (
+               <>
+                 <Route path="/referrals" element={<Rewards announcementsLen={announcements.length} />} />
+diff --git a/frontend/src/components/NavBar/AccountInfo/AccountInfo.tsx b/frontend/src/components/NavBar/AccountInfo/AccountInfo.tsx
+index 8a65b75e..2359d6c3 100644
+--- a/frontend/src/components/NavBar/AccountInfo/AccountInfo.tsx
++++ b/frontend/src/components/NavBar/AccountInfo/AccountInfo.tsx
+@@ -26,6 +26,7 @@ export default function AccountInfo({onNavigate}: {onNavigate(): void}) {
+   const route = useTradeRoute(), scope = usePositionView();
+   const access = useSponsoredTrading(), dialog = useTradingOnboarding();
+   const account = route.snapshot ?? route.attachedAccount;
++  const prefunded = Boolean(account && !account.isCreated && new BN(account.usdcRaw).gt(0));
+   const accountMode = scope.kind === 'account';
+   const user = useAppSelector(state => state.user);
+   const ready = user.tradeDataStatus === 'ready' && !!scope.address
+@@ -53,16 +54,17 @@ export default function AccountInfo({onNavigate}: {onNavigate(): void}) {
+   const accountDetails = <>
+     {account?.isCreated ? <AccountAddress key={account.address} address={account.address} label="CallPut Account address" explorerUrl={explorer} />
+       : route.isResolving ? <div role="status" aria-label="Loading account" aria-busy="true" className="flex h-[36px] items-center"><Skeleton className="h-[14px] w-[200px]" /></div>
+-      : <p className="py-[8px] text-[13px] text-gray8c8c">Set up your account to deposit and trade.</p>}
+-    {account?.isCreated && <div className="mt-[12px] flex items-baseline justify-between gap-[12px] text-[12px]">
+-      <span className="text-gray8c8c">Available to trade</span>
++      : <p className="py-[8px] text-[13px] text-gray8c8c">{prefunded ? 'Your deposit has arrived. Finish account setup to trade.' : 'Set up your account to deposit and trade.'}</p>}
++    {prefunded && account && <AccountAddress key={account.address} address={account.address} label="Deposit address" explorerUrl={explorer} />}
++    {account && (account.isCreated || prefunded) && <div className="mt-[12px] flex items-baseline justify-between gap-[12px] text-[12px]">
++      <span className="text-gray8c8c">{account.isCreated ? 'Available to trade' : 'Deposited · setup required'}</span>
+       <span className="break-all text-right text-[16px] font-[600] text-whitef2f2">{formatRaw(account.usdcRaw, 6, 2)} <span className="text-[12px] font-[400] text-gray8c8c">{settlementAsset(scope.chain).symbol}</span></span>
+     </div>}
+     {access.enabled && account?.isCreated && <div className="mt-[16px] grid grid-cols-2 gap-[8px]">
+       <button type="button" className="h-[40px] cursor-pointer rounded-[8px] bg-blue278e/10 text-[13px] font-[600] text-blue278e transition-colors hover:bg-blue278e/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue278e" onClick={() => open(dialog.deposit)}>Deposit</button>
+       <button type="button" className="h-[40px] cursor-pointer rounded-[8px] bg-black292c text-[13px] font-[600] text-whitef2f2 transition-colors hover:bg-black33 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue278e" onClick={() => open(dialog.withdraw)}>Withdraw</button>
+     </div>}
+-    {access.enabled && accountMode && !account?.isCreated && !route.isResolving && <button type="button" className="mt-[12px] w-full cursor-pointer rounded-[8px] bg-blue278e/10 py-[10px] text-[13px] font-[600] text-blue278e" onClick={() => open(dialog.deposit)}>Set up CallPut Account</button>}
++    {access.enabled && accountMode && !account?.isCreated && !route.isResolving && <button type="button" className="mt-[12px] w-full cursor-pointer rounded-[8px] bg-blue278e/10 py-[10px] text-[13px] font-[600] text-blue278e" onClick={() => open(dialog.open)}>{prefunded ? 'Finish CallPut setup' : 'Set up CallPut Account'}</button>}
+   </>;
+   return <div className="flex min-w-0 flex-col gap-[20px]">
+     <section aria-label={accountMode ? 'CallPut Account' : 'Wallet'}>
+diff --git a/frontend/src/components/TradingAccount/AccountSetup.tsx b/frontend/src/components/TradingAccount/AccountSetup.tsx
+index 10e782ca..829c0434 100644
+--- a/frontend/src/components/TradingAccount/AccountSetup.tsx
++++ b/frontend/src/components/TradingAccount/AccountSetup.tsx
+@@ -1,6 +1,6 @@
+ import {useEffect, useRef, useState} from 'react';
+ import {twJoin} from 'tailwind-merge';
+-import {completeAccountSetup, accountSetupMessage, type AccountSetupPhase} from '@/utils/accountSetupFlow';
++import {completeAccountSetup, accountSetupMessage, accountSetupStepState, type AccountSetupPhase, type AccountSetupStepState} from '@/utils/accountSetupFlow';
+ import {useSponsoredTrading} from './SponsoredTradingProvider';
+ import Button from '@/components/Common/Button';
+ import {DEFAULT_TRADING_DURATION} from '@/utils/tradingConsentPolicy';
+@@ -9,7 +9,6 @@ import {dialogBody, dialogButton} from './accountDialogStyles';
+ 
+ const TRADING_DAYS = Number(DEFAULT_TRADING_DURATION) / 86_400;
+ 
+-type StepState = 'pending' | 'active' | 'done' | 'failed';
+ /** Which setup step each flow phase belongs to, and what it is doing there. */
+ const PHASE_STEP: Record<AccountSetupPhase, {step: 0 | 1; status: string; note: string}> = {
+   checking: {step: 0, status: 'Checking', note: 'Looking up your trading account…'},
+@@ -59,9 +58,8 @@ export default function AccountSetup({onComplete}: {onComplete(): void}) {
+   }, [access.controller]);
+ 
+   const current = PHASE_STEP[phase];
+-  const stateOf = (index: number): StepState =>
+-    completed ? 'done' : failedStep === index ? 'failed' : !busy ? 'pending' : index < current.step ? 'done' : index === current.step ? 'active' : 'pending';
+-  const statusOf = (state: StepState) => state === 'done' ? 'Done' : state === 'failed' ? 'Failed' : state === 'active' ? current.status : 'Waiting';
++  const stateOf = (index: number) => accountSetupStepState(index, {activeStep: current.step, busy, completed, failedStep});
++  const statusOf = (state: AccountSetupStepState) => state === 'done' ? 'Done' : state === 'failed' ? 'Failed' : state === 'active' ? current.status : 'Waiting';
+   const owner = access.controller?.identity.owner;
+ 
+   const help = error ?? (completed ? 'All set. Opening your account…' : busy ? current.note : 'Two quick signatures. Free, no gas.');
+diff --git a/frontend/src/components/TradingAccount/SponsoredTradingProvider.tsx b/frontend/src/components/TradingAccount/SponsoredTradingProvider.tsx
+index 1257f163..97b62f34 100644
+--- a/frontend/src/components/TradingAccount/SponsoredTradingProvider.tsx
++++ b/frontend/src/components/TradingAccount/SponsoredTradingProvider.tsx
+@@ -205,13 +205,13 @@ export function SponsoredTradingProvider({config, network, policy, consentPolicy
+       // relay reply, so the click feels like the wallet flow's submission.
+       if (version === generation.current) monitor.current?.track(result.order.requestId);
+     }) : unavailableSponsoredOrder, [controller, version]);
+-  const submit = useCallback<SponsoredOrderSubmitter>(async input => {
++  const submit = useCallback<SponsoredOrderSubmitter>(async (input, onCaptured) => {
+         checkSetup(version === generation.current, 'trade_identity_changed');
+         checkSetup(!busy.current, 'trade_entry_busy');
+         const end = chainActivity.begin();
+         busy.current = true;
+         try {
+-          const result = await entry(input);
++          const result = await entry(input, onCaptured);
+           if (result.error && version === generation.current) {
+             const rejected = await monitor.current?.rejectUnsigned(result.order.requestId, tradeErrorMessage(result.error), result.order);
+             return rejected ? {...result, rejectedUnsigned: true as const} : result;
+diff --git a/frontend/src/hooks/useWalletLogout.test.cts b/frontend/src/hooks/useWalletLogout.test.cts
+index beb7abc9..194d86f5 100644
+--- a/frontend/src/hooks/useWalletLogout.test.cts
++++ b/frontend/src/hooks/useWalletLogout.test.cts
+@@ -104,6 +104,8 @@ test('failed relay logout keeps the wallet connected and a retry repairs the pen
+ test('an http page cannot hold a relay login, so disconnect skips the relay logout and completes', async () => {
+   const f = fixture();
+   Object.defineProperty(globalThis, 'location', {value: {origin: 'http://localhost:5173', protocol: 'http:'}, configurable: true});
++  await assert.rejects(f.login(A).signIn(f.sign), {code: 'owner_login_browser_unsupported'});
++  assert.equal(f.signatures(), 0, 'HTTP is rejected before any ownership signature');
+   assert.equal(await f.logout(), true);
+   assert.equal(f.requests.length, 0); assert.equal(f.connected(), false); assert.equal(f.notices.length, 0);
+   assert.deepEqual(f.order, ['wagmi', 'privy-wallet', 'privy-session']);
+diff --git a/frontend/src/interfaces/interfaces.marketSlice.ts b/frontend/src/interfaces/interfaces.marketSlice.ts
+index 9c522687..5e836b00 100644
+--- a/frontend/src/interfaces/interfaces.marketSlice.ts
++++ b/frontend/src/interfaces/interfaces.marketSlice.ts
+@@ -88,6 +88,9 @@ export interface ITradingTitle {
+ }
+ 
+ export interface IMarketSlice {
++  /** Provenance of the REST option listing; arrival time is not source freshness. */
++  sourceTimestamp?: number | null;
++  sourceChain?: string | null;
+   marketStatus: 'idle' | 'loading' | 'ready' | 'failed';
+   olpStatsLoaded: boolean;
+   underlyingAssets: UnderlyingAsset[];
+diff --git a/frontend/src/networks/configs.ts b/frontend/src/networks/configs.ts
+index 59a9c176..c2bbd624 100644
+--- a/frontend/src/networks/configs.ts
++++ b/frontend/src/networks/configs.ts
+@@ -28,6 +28,7 @@ import IconSocialDiscordSelected from "@assets/img/social/discord-on.png";
+ 
+ import { ChainIds, RpcUrls, SupportedChains } from "@/_shared";
+ import { isRewardsEnabled } from "./rewards";
++import {stockIncomeEnabled, STOCK_INCOME_ROUTE} from './stockIncome';
+ 
+ const getBaseConfig = () => ({
+   CHAIN_ID: ChainIds.Base,
+@@ -55,8 +56,7 @@ export const LANDING_PATH: Record<SupportedChains, "/options" | "/prediction"> =
+   [SupportedChains["Robinhood"]]: "/prediction",
+ };
+ 
+-// Menu entries are identical across chains; shared so a chain change is one edit. Takes the chain
+-// for its two settings: which trading page leads (LANDING_PATH) and whether Referrals is enabled.
++// One menu source for desktop and mobile; feature entries follow their chain policy.
+ const getDefaultMenu = (chain: SupportedChains): MenuMap[SupportedChains] => {
+   // Guided options flow. NavBar / MobileNavDrawer render `name` verbatim, so every label in this
+   // menu stays a plain string (the i18n key `simple-options.menu` only mirrors this one, for when
+@@ -82,6 +82,8 @@ const getDefaultMenu = (chain: SupportedChains): MenuMap[SupportedChains] => {
+   };
+   return [
+     ...(LANDING_PATH[chain] === "/options" ? [options, prediction] : [prediction, options]),
++    ...(stockIncomeEnabled(chain) ? [{id: 5, name: 'Stock Income', url: STOCK_INCOME_ROUTE,
++      isExternal: false, isNew: true, isDisabled: false}] : []),
+     {
+       id: 3,
+       name: "Pools",
+diff --git a/frontend/src/networks/tradingModes.ts b/frontend/src/networks/tradingModes.ts
+index a09f3c3d..00fde989 100644
+--- a/frontend/src/networks/tradingModes.ts
++++ b/frontend/src/networks/tradingModes.ts
+@@ -1,10 +1,40 @@
+-import type {SupportedChains} from '@/_shared';
++import {SupportedChains, type SupportedChains as SupportedChainsType} from '@/_shared';
+ import type {TradingModePolicy} from '@/utils/tradingModeChoice';
+ 
+-/** Product policy, independent of whether account infrastructure is reachable.
+- * Add a future chain here only when its deployment configuration exists. */
+-export const TRADING_MODE_POLICIES: Record<SupportedChains, TradingModePolicy> = {
++const DEPLOYMENT_POLICIES: Record<SupportedChainsType, TradingModePolicy> = {
+   Base: 'wallet-only',
+   Giwa: 'deposit-only',
+   Robinhood: 'deposit-only',
+ };
++
++export interface TradingModeResolverInput {
++  dev: boolean;
++  hostname: string;
++  robinhoodWalletFlag: string | undefined;
++}
++
++/**
++ * Product policy, independent of whether account infrastructure is reachable.
++ * The Robinhood wallet route is a local QA escape hatch only: it requires the
++ * Vite dev build, an explicit flag, and a loopback hostname. Production and
++ * every non-loopback host always retain the deployment policy.
++ */
++export function resolveTradingModePolicies({
++  dev,
++  hostname,
++  robinhoodWalletFlag,
++}: TradingModeResolverInput): Record<SupportedChainsType, TradingModePolicy> {
++  const policies = {...DEPLOYMENT_POLICIES};
++  const loopback = hostname === 'localhost' || hostname === '127.0.0.1';
++  if (dev && loopback && robinhoodWalletFlag === '1') {
++    policies[SupportedChains.Robinhood] = 'wallet-only';
++  }
++  return policies;
++}
++
++const browserHostname = typeof window === 'undefined' ? '' : window.location.hostname;
++export const TRADING_MODE_POLICIES = resolveTradingModePolicies({
++  dev: Boolean(import.meta.env?.DEV),
++  hostname: browserHostname,
++  robinhoodWalletFlag: import.meta.env?.VITE_DEV_ROBINHOOD_WALLET_TRADING,
++});
+diff --git a/frontend/src/store/slices/MarketDaily.test.cts b/frontend/src/store/slices/MarketDaily.test.cts
+index f1c2628c..6d0ce279 100644
+--- a/frontend/src/store/slices/MarketDaily.test.cts
++++ b/frontend/src/store/slices/MarketDaily.test.cts
+@@ -60,6 +60,17 @@ test('initial market failures stay unknown; a successful empty market is ready a
+   assert.equal(f.timers.size, 0);
+ });
+ 
++test('retains the upstream timestamp and chain; no timestamp never becomes fresh at arrival', async () => {
++  let timestamp: number | undefined = 123000;
++  const f = fixture(async () => response({data: {market: {}}, timestamp} as any));
++  await f.loadMarket();
++  assert.equal(f.state().sourceTimestamp, 123000);
++  assert.equal(f.state().sourceChain, 'Giwa');
++  timestamp = undefined;
++  await f.loadMarket();
++  assert.equal(f.state().sourceTimestamp, null);
++});
++
+ test('one daily request serves both consumers; no repeat fetch after success or chain-state overwrite', async () => {
+   const urls: string[] = [];
+   let finish!: (value: unknown) => void;
+diff --git a/frontend/src/store/slices/MarketSlice.ts b/frontend/src/store/slices/MarketSlice.ts
+index 390fe8b5..02eb174a 100644
+--- a/frontend/src/store/slices/MarketSlice.ts
++++ b/frontend/src/store/slices/MarketSlice.ts
+@@ -60,6 +60,8 @@ BigNumber.config({
+ });
+ 
+ const initialState: IMarketSlice = {
++  sourceTimestamp: null,
++  sourceChain: null,
+   marketStatus: 'idle',
+   olpStatsLoaded: false,
+   underlyingAssets: [
+@@ -277,8 +279,11 @@ const marketSlice = createSlice({
+       })
+       .addCase(
+         loadMarketData.fulfilled,
+-        (state, action: PayloadAction<any>) => {
++        (state, action) => {
+           if (!action.payload?.data?.market) return;
++          state.sourceTimestamp = Number.isSafeInteger(action.payload.timestamp) && action.payload.timestamp > 0
++            ? action.payload.timestamp : null;
++          state.sourceChain = action.meta.arg;
+           state.marketStatus = 'ready';
+           const {
+             market,
+diff --git a/frontend/src/store/wagmi.ts b/frontend/src/store/wagmi.ts
+index c3599e5b..cb5867db 100644
+--- a/frontend/src/store/wagmi.ts
++++ b/frontend/src/store/wagmi.ts
+@@ -15,7 +15,6 @@ import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
+ import { Chain, defineChain, Transport } from "viem";
+ import {publicRpcTransport} from '@/utils/publicRpcTransport';
+ import { base } from "wagmi/chains";
+-import { Attribution } from "ox/erc8021";
+ 
+ // Giwa Sepolia is not a wagmi/viem builtin — define it locally. chainId 91342,
+ // native ETH. Use the same label as SupportedChains; runtime wallet checks
+@@ -58,7 +57,7 @@ export const robinhoodMainnet = defineChain({
+ // our on-chain volume to this builder code. Kept per-call on purpose — the
+ // on-chain result is identical and it keeps the contract layer independent of
+ // the connection layer.
+-export const DATA_SUFFIX = Attribution.toDataSuffix({ codes: ["bc_pjqd8vwg"] });
++export {DATA_SUFFIX} from '../utils/transactionAttribution';
+ 
+ // One active chain per document; switching creates a new wagmi/Privy lifetime.
+ const CHAIN_BY_KEY = {
+diff --git a/frontend/src/utils/accountAccessState.test.cts b/frontend/src/utils/accountAccessState.test.cts
+index 6aef5bcb..a0212a8c 100644
+--- a/frontend/src/utils/accountAccessState.test.cts
++++ b/frontend/src/utils/accountAccessState.test.cts
+@@ -1,6 +1,6 @@
+ import assert from 'node:assert/strict';
+ import {test} from 'node:test';
+-import {accountAccessStage} from './accountAccessState';
++import {accountAccessFundingReady, accountAccessStage} from './accountAccessState';
+ import type {SponsoredSetupSnapshot} from './sponsoredSetup';
+ import type {TradingConsentSnapshot} from './tradingConsent';
+ import {newOrderGateReason} from './tradeRoutePolicy';
+@@ -8,7 +8,7 @@ import type {TradeRoute} from './tradeRoutePolicy';
+ const state = (balance: string | null, account = true) => ({account:account?{}:null,
+   directDeposit:balance === null ? null : {balance}} as SponsoredSetupSnapshot);
+ const consent = (approved: boolean, installed: boolean, awaitingDeposit = false) => ({current:{approvalRecorded:approved,
+-  localApprovalCurrent:installed, awaitingDeposit}} as TradingConsentSnapshot);
++  installed, localApprovalCurrent:installed, awaitingDeposit}} as TradingConsentSnapshot);
+ test('approved but unfunded accounts offer deposit, without repeating device consent', () => {
+   assert.equal(accountAccessStage(state('0'),consent(true,false,true)),'deposit');
+   assert.equal(accountAccessStage(state('100'),consent(true,false)),'activating');
+@@ -27,3 +27,19 @@ test('purchase gates distinguish deposit and renewal, and never block explicit w
+   assert.equal(newOrderGateReason({...route,snapshot:{isCreated:false}} as TradeRoute,true,false,'verify'),'setup');
+   assert.equal(newOrderGateReason({kind:'wallet',owner:'0x1',walletOpenAllowed:true} as TradeRoute,true,false,'error'),null);
+ });
++test('pre-funding access requires an installed grant or an accepted grant waiting for an empty deposit', () => {
++  const installed = consent(true, true);
++  assert.equal(accountAccessFundingReady(state('0'), installed), true,
++    'an installed local grant can receive the first funding');
++  const awaiting = {current: {installed: false, localApprovalCurrent: false, approvalRecorded: true,
++    awaitingDeposit: true, operationPending: true}} as TradingConsentSnapshot;
++  assert.equal(accountAccessFundingReady(state('0'), awaiting), true,
++    'a relay-accepted grant may wait for the first direct deposit');
++  assert.equal(accountAccessFundingReady(state('0'), {...awaiting,
++    current: {...awaiting.current!, awaitingDeposit: false}} as TradingConsentSnapshot), false,
++    'a generic queued approval is not proof that funding will activate it');
++  assert.equal(accountAccessFundingReady(state('1'), awaiting), false,
++    'the pending exception applies only to the empty account');
++  assert.equal(accountAccessFundingReady(state('0', false), awaiting), false);
++  assert.equal(accountAccessFundingReady(state('0'), null), false);
++});
+diff --git a/frontend/src/utils/accountAccessState.ts b/frontend/src/utils/accountAccessState.ts
+index 2ceb2367..2ce38694 100644
+--- a/frontend/src/utils/accountAccessState.ts
++++ b/frontend/src/utils/accountAccessState.ts
+@@ -12,3 +12,14 @@ export function accountAccessStage(snapshot: SponsoredSetupSnapshot, consent: Tr
+   if (snapshot.directDeposit?.balance === '0') return 'deposit';
+   return current.localApprovalCurrent ? 'ready' : 'activating';
+ }
++
++/** Whether a direct-deposit account can safely receive its first funding.
++ * A relay-accepted grant may be installed by that deposit, but only while the
++ * canonical operation is explicitly waiting for an empty account deposit. */
++export function accountAccessFundingReady(snapshot: SponsoredSetupSnapshot, consent: TradingConsentSnapshot | null): boolean {
++  const current = consent?.current, deposit = snapshot.directDeposit;
++  if (!snapshot.account || !deposit || !current) return false;
++  if (current.installed && current.localApprovalCurrent) return true;
++  return !current.installed && deposit.balance === '0' && current.approvalRecorded
++    && current.awaitingDeposit && current.operationPending;
++}
+diff --git a/frontend/src/utils/accountSetupFlow.test.cts b/frontend/src/utils/accountSetupFlow.test.cts
+index da8c5df1..b7a2fcac 100644
+--- a/frontend/src/utils/accountSetupFlow.test.cts
++++ b/frontend/src/utils/accountSetupFlow.test.cts
+@@ -1,6 +1,6 @@
+ import {test} from 'node:test';
+ import assert from 'node:assert/strict';
+-import {completeAccountSetup, setupRecoverySession} from './accountSetupFlow';
++import {accountSetupMessage, accountSetupStepState, completeAccountSetup, setupRecoverySession} from './accountSetupFlow';
+ import {SponsoredSetupError} from './sponsoredSetupPolicy';
+ import type {SponsoredSetupController} from './sponsoredSetup';
+ import {defaultTradingLimits} from './tradingConsentPolicy';
+@@ -81,6 +81,13 @@ test('a rejected login never creates an account or silently retries signing', as
+   f.controller.signIn = async () => {prompts++; throw new Error('rejected');};
+   await assert.rejects(f.run(), /rejected/); assert.equal(prompts, 1); assert.ok(!f.events.includes('create'));
+ });
++test('an existing account reports a login failure in ownership before enabling trading', async () => {
++  const f = fixture(); f.setAccount();
++  f.controller.signIn = async () => {throw new SponsoredSetupError('owner_login_browser_unsupported');};
++  await assert.rejects(f.run(), /owner_login_browser_unsupported/);
++  assert.ok(f.events.includes('wallet'));
++  assert.ok(!f.events.includes('permission'));
++});
+ test('an uncertain grant response does not complete setup or trigger a second signature', async () => {
+   const f = fixture(); f.setAccount(); let calls = 0;
+   f.controller.trading.approve = async () => {calls++;};
+@@ -116,3 +123,17 @@ test('a creation the relay holds for a paused sponsor budget fails fast with its
+   await assert.rejects(f.run(), (e: any) => e instanceof SponsoredSetupError && e.code === 'setup_sponsor_paused');
+   assert.ok(f.events.includes('create') && !f.events.includes('approve'));
+ });
++test('an insecure page explains the HTTPS requirement instead of asking for another wallet confirmation', () => {
++  assert.equal(accountSetupMessage({code: 'owner_login_browser_unsupported'}),
++    'Trading access requires HTTPS and a browser that supports secure sessions. Open this app over HTTPS in a supported browser and try again.');
++});
++test('a relay challenge for another app origin explains the authorized-origin requirement', () => {
++  assert.equal(accountSetupMessage({code: 'owner_login_origin_mismatch'}),
++    "Trading access must use this network's authorized CallPut HTTPS origin. Open the official app and try again.");
++});
++test('a permission failure keeps verified ownership done, while cancellation resets both rows', () => {
++  assert.equal(accountSetupStepState(0, {activeStep:1,busy:false,completed:false,failedStep:1}), 'done');
++  assert.equal(accountSetupStepState(1, {activeStep:1,busy:false,completed:false,failedStep:1}), 'failed');
++  assert.equal(accountSetupStepState(1, {activeStep:0,busy:false,completed:false,failedStep:0}), 'pending');
++  for (const index of [0,1]) assert.equal(accountSetupStepState(index, {activeStep:0,busy:false,completed:false,failedStep:null}), 'pending');
++});
+diff --git a/frontend/src/utils/accountSetupFlow.ts b/frontend/src/utils/accountSetupFlow.ts
+index c1f836c1..c75e369f 100644
+--- a/frontend/src/utils/accountSetupFlow.ts
++++ b/frontend/src/utils/accountSetupFlow.ts
+@@ -7,6 +7,15 @@ import {readAccountAccess} from './readAccountAccess';
+ export const ACCOUNT_ACCESS_CHANGED = 'callput:account-access-changed';
+ export const notifyAccountAccessChanged = () => window.dispatchEvent(new Event(ACCOUNT_ACCESS_CHANGED));
+ export type AccountSetupPhase = 'checking' | 'wallet' | 'creating' | 'permission' | 'confirming';
++export type AccountSetupStepState = 'pending' | 'active' | 'done' | 'failed';
++export function accountSetupStepState(index: number, state: {
++  activeStep: number; busy: boolean; completed: boolean; failedStep: number | null;
++}): AccountSetupStepState {
++  if (state.completed) return 'done';
++  if (state.failedStep !== null) return index < state.failedStep ? 'done' : index === state.failedStep ? 'failed' : 'pending';
++  if (!state.busy) return 'pending';
++  return index < state.activeStep ? 'done' : index === state.activeStep ? 'active' : 'pending';
++}
+ 
+ /** A failed transport does not invalidate the signed grant. Recover by explicitly
+  * revoking this exact session, then wait for canonical resolution before renewal. */
+@@ -77,8 +86,8 @@ export async function completeAccountSetup(controller: SponsoredSetupController,
+   const previous = consent.current?.preparation.session;
+   checkSetup(!previous || consent.current?.resolution
+     || BigInt(previous.grant.validUntil as string) >= BigInt(consent.current!.context.blockTimestamp), 'setup_permission_expiry_pending');
++  if (!ensuredLogin) {options.phase('wallet'); await controller.signIn(0, guard); guard();}
+   options.phase('permission');
+-  if (!ensuredLogin) {await controller.signIn(0, guard); guard();}
+   // A prepared attempt has immutable signed terms. Resume it instead of silently
+   // changing amounts/expiry or allocating another grant after a lost reply.
+   const limits = consent.saved && !consent.current?.resolution ? consent.saved.limits : defaultTradingLimits();
+@@ -95,6 +104,10 @@ export async function completeAccountSetup(controller: SponsoredSetupController,
+ export function accountSetupMessage(error: unknown) {
+   const value = error as {code?: unknown; status?: number} | null;
+   const code = typeof value?.code === 'string' ? value.code : '';
++  if (code === 'owner_login_browser_unsupported' || code === 'setup_browser_unsupported')
++    return 'Trading access requires HTTPS and a browser that supports secure sessions. Open this app over HTTPS in a supported browser and try again.';
++  if (code === 'owner_login_origin_mismatch')
++    return "Trading access must use this network's authorized CallPut HTTPS origin. Open the official app and try again.";
+   if (value?.code === 4001 || code.includes('signature_failed')) return 'Wallet confirmation cancelled. Continue when you are ready.';
+   if (code === 'setup_creation_pending') return 'Your account is still being created. We will keep checking; you can continue setup when it is ready.';
+   if (code === 'setup_sponsor_paused') return 'Sponsored account creation is paused while the sponsor budget recovers. Your request is kept; please try again later.';
+diff --git a/frontend/src/utils/contract/base.ts b/frontend/src/utils/contract/base.ts
+index 3628f227..f98a6ba7 100644
+--- a/frontend/src/utils/contract/base.ts
++++ b/frontend/src/utils/contract/base.ts
+@@ -96,6 +96,7 @@ export const makeRequestTransaction = async ({
+   txInfo,
+   chain,
+   onSubmitError,
++  onSubmitted,
+   target,
+   positionOwner,
+   beforeSubmit,
+@@ -107,6 +108,8 @@ export const makeRequestTransaction = async ({
+   txInfo: NewPosition;
+   chain: SupportedChains;
+   onSubmitError?: (error: unknown) => void;
++  /** Persist a broadcast before waiting; a lost receipt must never permit a second order. */
++  onSubmitted?: (hash: `0x${string}`) => void;
+   /**
+    * Contract the request is sent to. Default = PositionManager (wallet direct
+    * path). The trading-account route passes the clone, whose `openPosition` /
+@@ -174,6 +177,7 @@ export const makeRequestTransaction = async ({
+ 
+     beforeSubmit?.(preparedAddress);
+     const hash = await writeContract(config, request);
++    onSubmitted?.(hash);
+     track("tx_submitted", { tx_type: functionName, tx_hash: hash });
+ 
+     addToastMessage({
+diff --git a/frontend/src/utils/contract/chainWriteIsolation.test.cts b/frontend/src/utils/contract/chainWriteIsolation.test.cts
+index 83dd7f3f..58772716 100644
+--- a/frontend/src/utils/contract/chainWriteIsolation.test.cts
++++ b/frontend/src/utils/contract/chainWriteIsolation.test.cts
+@@ -50,3 +50,26 @@ test('an in-flight simulation blocks switching until rejection; a late old-docum
+   await assert.rejects(f.submit(8453), /Network is switching/);
+   assert.deepEqual(f.calls, [8453]);
+ });
++
++test('wallet order publishes its transaction hash before waiting for a receipt', async () => {
++  const events: string[] = [];
++  const hash = `0x${'a'.repeat(64)}`;
++  const activity = compile('../chainActivity.ts', {});
++  const base = compile('base.ts', {
++    '../chainActivity': activity, 'bignumber.js': BigNumber,
++    '@/networks/runtime': {ACTIVE_CHAIN: 'Base', ACTIVE_CHAIN_ID: 8453},
++    '@/networks/chainSelection': {assertChainId}, '@/_shared/constants/networks': {ChainIds: {Base: 8453}},
++    '@/networks/addresses': {CONTRACT_ADDRESSES: {Base: {POSITION_MANAGER: '0x' + '2'.repeat(40)}}},
++    '@/store/wagmi': {config: {}}, '../toast': {addToastMessage() {}, removeToastMessage() {}}, '../analytics': {track() {}},
++    'wagmi/actions': {
++      async simulateContract() {return {request: {account: {address: '0x' + '1'.repeat(40)}}};},
++      async writeContract() {events.push('broadcast'); return hash;},
++      async waitForTransactionReceipt() {events.push('receipt'); return {status: 'reverted', logs: []};},
++    },
++  });
++  await base.makeRequestTransaction({isOpen: true, functionName: 'createOpenPosition', args: [], value: 1n,
++    txInfo: {}, chain: 'Base', target: {address: '0x' + '2'.repeat(40), abi: []},
++    onSubmitted: (value: string) => {assert.equal(value, hash); events.push('persist');},
++  });
++  assert.deepEqual(events, ['broadcast', 'persist', 'receipt']);
++});
+diff --git a/frontend/src/utils/contract/positions.ts b/frontend/src/utils/contract/positions.ts
+index 9633e1b2..66c9e24d 100644
+--- a/frontend/src/utils/contract/positions.ts
++++ b/frontend/src/utils/contract/positions.ts
+@@ -75,6 +75,7 @@ export async function sendCreateOpenPosition<T extends SupportedChains>(
+    */
+   options?: {
+     onSubmitError?: (error: unknown) => void;
++    onSubmitted?: (hash: `0x${string}`) => void;
+     source?: TradeSourceValue;
+     sponsored?: SponsoredOrderSubmitter;
+   },
+@@ -226,6 +227,7 @@ export const writeCreateOpenPosition = async (
+   chain: SupportedChains,
+   options?: {
+     onSubmitError?: (error: unknown) => void;
++    onSubmitted?: (hash: `0x${string}`) => void;
+     source?: TradeSourceValue;
+     sponsored?: SponsoredOrderSubmitter;
+   },
+@@ -241,7 +243,7 @@ export const writeCreateOpenPosition = async (
+       return await makeRequestTransaction({isOpen: true, functionName: 'createOpenPosition',
+         args: [args.underlyingAssetIndex, args.length, args.isBuys, args.optionIds, args.isCalls, args.minSize,
+           args.path, args.amountIn, args.minOutWhenSwap, args.leadTrader],
+-        value: parseEther(EXECUTION_FEE), txInfo: args.txInfo, chain, onSubmitError: options?.onSubmitError,
++        value: parseEther(EXECUTION_FEE), txInfo: args.txInfo, chain, onSubmitError: options?.onSubmitError, onSubmitted: options?.onSubmitted,
+         beforeSubmit: prepared => {
+           const current = routeForOpen(args.leadTrader);
+           requireLiveWallet(route.owner!, chain);
+diff --git a/frontend/src/utils/ownerLoginPolicy.test.cts b/frontend/src/utils/ownerLoginPolicy.test.cts
+index 2f56f2dd..1229c85c 100644
+--- a/frontend/src/utils/ownerLoginPolicy.test.cts
++++ b/frontend/src/utils/ownerLoginPolicy.test.cts
+@@ -25,6 +25,12 @@ test("challenge rejects changed owner, chain, origin, URI, statement, request, n
+     invalid(() => loginChallenge(challenge(patch), identity, origin, now));
+   invalid(() => loginChallenge({ ...challenge(), message: challenge().message + "\nResources:\n- https://callput.test/spend" }, identity, origin, now));
+ });
++test("a relay challenge for another HTTPS application origin has a distinct failure code", () => {
++  const other = 'https://robin.callput.app';
++  const value = challenge({domain: new URL(other).host, uri: other + protocol.session});
++  assert.throws(() => loginChallenge(value, identity, origin, now),
++    (error: unknown) => error instanceof OwnerLoginError && error.code === 'owner_login_origin_mismatch');
++});
+ test("challenge enforces exact shape and challenge/session time windows", () => {
+   for (const value of [null, [], {}, { ...challenge(), token: "unwanted" }, { ...challenge(), expiresAt: "bad" },
+     { ...challenge(), expiresAt: new Date(now + 301_000).toISOString() },
+diff --git a/frontend/src/utils/ownerLoginPolicy.ts b/frontend/src/utils/ownerLoginPolicy.ts
+index 5c2522c6..7d6ad184 100644
+--- a/frontend/src/utils/ownerLoginPolicy.ts
++++ b/frontend/src/utils/ownerLoginPolicy.ts
+@@ -51,6 +51,8 @@ export function loginChallenge(value: unknown, identity: OwnerLoginIdentity, ori
+   checkLogin(expires > now, "owner_login_challenge_expired");
+   const parsed = parseSiweMessage(row.message);
+   checkLogin(parsed.issuedAt && parsed.expirationTime && parsed.nonce && /^[0-9a-f]{32}$/.test(parsed.nonce));
++  checkLogin(parsed.domain === url.host && parsed.scheme === 'https'
++    && parsed.uri === origin + protocol.session, 'owner_login_origin_mismatch');
+   const issued = parsed.issuedAt.getTime(), lifetime = sessionExpires - issued;
+   checkLogin(Number.isFinite(issued) && issued <= now + 5000
+     && expires === issued + protocol.challengeSeconds * 1000
+diff --git a/frontend/src/utils/sponsoredOrderEntry.test.cts b/frontend/src/utils/sponsoredOrderEntry.test.cts
+index 1c79cf70..0a98b377 100644
+--- a/frontend/src/utils/sponsoredOrderEntry.test.cts
++++ b/frontend/src/utils/sponsoredOrderEntry.test.cts
+@@ -32,16 +32,18 @@ test('matching asset strings reach the existing open and close submission paths'
+     {signer: '0x' + '3'.repeat(40), nonce: '0', epoch: '0', validAfter: String(now - 30), validUntil: String(now + 1800),
+       underlyings: ['20'], strategies: '480', maxAmountPerOpen: '100', maxAmount: '1000', maxOpens: '10', maxCloses: '10',
+       maxFeePerTrade: '100', maxFees: '1000'});
+-  let captures = 0; const actions: string[] = [];
++  let captures = 0, durableId: string | null = null; const actions: string[] = [];
+   const controller = {identity, trading: {selectedSession() {return session;}, async read() {throw new Error('full consent read must not precede an order');}},
+-    trades: {async submit(order: {action: string}) {actions.push(order.action); return null;}}};
++    trades: {async submit(order: {action: string;requestId:string}) {assert.equal(durableId,order.requestId); actions.push(order.action); return null;}}};
+   const enter = createSponsoredOrderEntry(controller as unknown as SponsoredSetupController, () => {captures++;});
+   const open = {underlyingAssetIndex: '20', length: '2', isBuys: [true, false, false, false], isCalls: [true, true, false, false],
+     optionIds: Array(4).fill('0x' + '0'.repeat(64)), minSize: '1', amountIn: '10'};
+-  await enter({...identity, custodian: identity.account, action: 'open', params: open, source: '0'});
++  await enter({...identity, custodian: identity.account, action: 'open', params: open, source: '0'}, pending => {durableId=pending.order.requestId;});
+   await enter({...identity, custodian: identity.account, action: 'close', params: {
+-    underlyingAssetIndex: '20', optionTokenId: '1', size: '1', minAmountOut: '0'}, source: '0'});
++    underlyingAssetIndex: '20', optionTokenId: '1', size: '1', minAmountOut: '0'}, source: '0'}, pending => {durableId=pending.order.requestId;});
+   assert.deepEqual(actions, ['open', 'close']); assert.equal(captures, 2);
++  await assert.rejects(enter({...identity,custodian:identity.account,action:'open',params:open,source:'0'}, () => {throw Error('storage failed');}), /storage failed/);
++  assert.equal(actions.length,2,'failed persistence must never sign or submit');
+ });
+ test('an order refused by a busy key store is retried with the same request id', async () => {
+   const identity = {chainId: '8453', owner: '0x' + '1'.repeat(40), account: '0x' + '2'.repeat(40)};
+diff --git a/frontend/src/utils/sponsoredOrderEntry.ts b/frontend/src/utils/sponsoredOrderEntry.ts
+index 50057848..dc11b00e 100644
+--- a/frontend/src/utils/sponsoredOrderEntry.ts
++++ b/frontend/src/utils/sponsoredOrderEntry.ts
+@@ -14,7 +14,9 @@ export interface AccountOrderSubmission {
+ }
+ export const accountSubmissionState = (result: AccountOrderSubmission) =>
+   result.rejectedUnsigned ? 'rejected' : result.error || !result.status ? 'unknown' : 'submitted';
+-export type SponsoredOrderSubmitter = (input: AccountOrderInput) => Promise<AccountOrderSubmission>;
++/** Capture is synchronous and runs before any signing. Hosts with a loan journal
++ * must persist the original request ID here; a storage failure aborts submission. */
++export type SponsoredOrderSubmitter = (input: AccountOrderInput, onCaptured?: (pending: AccountOrderSubmission) => void) => Promise<AccountOrderSubmission>;
+ const notifiedErrors = new WeakSet<object>();
+ export const orderErrorWasNotified = (error: unknown) => Boolean(error && typeof error === 'object' && notifiedErrors.has(error));
+ export const markOrderErrorNotified = (error: unknown) => {if (error && typeof error === 'object') notifiedErrors.add(error);};
+@@ -54,7 +56,7 @@ export function createSponsoredOrderEntry(controller: SponsoredSetupController,
+       }
+     }
+   };
+-  return async (input: AccountOrderInput): Promise<AccountOrderSubmission> => {
++  return async (input: AccountOrderInput, onCaptured?: (pending: AccountOrderSubmission) => void): Promise<AccountOrderSubmission> => {
+     checkSetup(!running, 'trade_entry_busy'); running = true;
+     try {
+       const quote = structuredClone(input), id = crypto.randomUUID();
+@@ -72,6 +74,7 @@ export function createSponsoredOrderEntry(controller: SponsoredSetupController,
+       const order = sessionOrder({requestId: id, session, action: quote.action, params: quote.params,
+         source: quote.source, deadline: (deadline < end ? deadline : end).toString()}, identity);
+       const pending: AccountOrderSubmission = {kind: 'account', order, status: null, error: null};
++      onCaptured?.(pending);
+       captured(pending);
+       try { return {...pending, status: await available(() => trades.submit(order))}; }
+       catch (error) { return {...pending, error: orderErrorCode(error)}; }
+diff --git a/frontend/src/utils/tradingModeChoice.test.cts b/frontend/src/utils/tradingModeChoice.test.cts
+index e92a25c3..da8f6009 100644
+--- a/frontend/src/utils/tradingModeChoice.test.cts
++++ b/frontend/src/utils/tradingModeChoice.test.cts
+@@ -1,7 +1,18 @@
+ import assert from 'node:assert/strict';
+ import {test} from 'node:test';
+ import {allowedTradingModes, loginTradingMode, normalizeTradingMode} from './tradingModeChoice';
+-import {TRADING_MODE_POLICIES} from '../networks/tradingModes';
++import {resolveTradingModePolicies, TRADING_MODE_POLICIES} from '../networks/tradingModes';
++
++test('Robinhood wallet trading is opt-in and loopback dev-only', () => {
++  const input = {dev: true, hostname: 'localhost', robinhoodWalletFlag: '1'} as const;
++  assert.equal(resolveTradingModePolicies(input).Robinhood, 'wallet-only');
++  assert.equal(resolveTradingModePolicies({...input, dev: false}).Robinhood, 'deposit-only');
++  assert.equal(resolveTradingModePolicies({...input, hostname: 'robin.callput.app'}).Robinhood, 'deposit-only');
++  assert.equal(resolveTradingModePolicies({...input, hostname: '127.0.0.2'}).Robinhood, 'deposit-only');
++  assert.equal(resolveTradingModePolicies({...input, robinhoodWalletFlag: 'true'}).Robinhood, 'deposit-only');
++  assert.equal(resolveTradingModePolicies({...input, hostname: 'localhost'}).Base, 'wallet-only');
++  assert.equal(resolveTradingModePolicies({...input, hostname: 'localhost'}).Giwa, 'deposit-only');
++});
+ 
+ test('deployment policies ignore unavailable saved choices and unreadable storage', () => {
+   assert.equal(TRADING_MODE_POLICIES.Base, 'wallet-only');
+diff --git a/frontend/vite.config.ts b/frontend/vite.config.ts
+index 3581490e..91e07a0c 100644
+--- a/frontend/vite.config.ts
++++ b/frontend/vite.config.ts
+@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
+ import { defineConfig, loadEnv } from "vite";
+ import svgr from "vite-plugin-svgr";
+ import { createRequire } from "node:module";
++import { readFileSync } from "node:fs";
+ import {networkTransitionHtml} from './scripts/network-transition-html';
+ 
+ const require = createRequire(import.meta.url);
+@@ -45,6 +46,11 @@ function isStaticallyReachable(
+ // https://vitejs.dev/config/
+ export default ({ mode, command }: { mode: string; command: string }) => {
+   const env = loadEnv(mode, process.cwd(), "VITE_");
++  // Local account auth uses Secure / __Host cookies. Explicit TLS files stay
++  // server-side; never expose certificate keys through VITE_ environment data.
++  const tlsCert = command === 'serve' ? process.env.CALLPUT_DEV_TLS_CERT : undefined;
++  const tlsKey = command === 'serve' ? process.env.CALLPUT_DEV_TLS_KEY : undefined;
++  if (Boolean(tlsCert) !== Boolean(tlsKey)) throw new Error('Set both CALLPUT_DEV_TLS_CERT and CALLPUT_DEV_TLS_KEY.');
+   // Every chain has public defaults (the Privy app comes from networks/privy.ts); only the
+   // Robinhood deployment still requires its endpoints at build time, so a missing value fails
+   // `build:robinhood` here instead of on every route of a deployed bundle. Dev server only warns.
+@@ -70,16 +76,28 @@ export default ({ mode, command }: { mode: string; command: string }) => {
+       // is reachable from the internet. Pass `--host 0.0.0.0` for LAN (phone) checks.
+       host: "127.0.0.1",
+       port: 5173,
++      https: tlsCert && tlsKey ? {cert: readFileSync(tlsCert), key: readFileSync(tlsKey)} : undefined,
+       // The app talks to its relay on the page origin (`/v1/...`). On localhost that
+       // origin has no relay, so account flows fail with an HTML reply. Opt in to a
+       // proxy for local checks: VITE_DEV_RELAY_ORIGIN=https://giwa.callput.app.
+       // Dev server only; builds never read it.
+-      proxy: env.VITE_DEV_RELAY_ORIGIN && command === "serve" ? {
++      proxy: command === "serve" ? {
++        ...(env.VITE_DEV_RELAY_ORIGIN ? {
+         "/v1": {
+           target: env.VITE_DEV_RELAY_ORIGIN, changeOrigin: true, secure: true,
+           headers: { origin: env.VITE_DEV_RELAY_ORIGIN },
+           cookieDomainRewrite: "",
+         },
++        } : {}),
++        // The public S3 bucket only publishes CORS headers for app domains.
++        // Keep wallet QA on real Robinhood data through a read-only dev proxy.
++        ...(env.VITE_DEV_ROBINHOOD_WALLET_TRADING === '1' ? {
++          '/dev-public/robinhood': {
++            target: 'https://app-data-robinhood.s3.ap-southeast-1.amazonaws.com',
++            changeOrigin: true, secure: true,
++            rewrite: path => path.replace(/^\/dev-public\/robinhood/, ''),
++          },
++        } : {}),
+       } : undefined,
+     },
+     build: {
+@@ -141,6 +159,16 @@ export default ({ mode, command }: { mode: string; command: string }) => {
+       include: ["eventemitter3"],
+     },
+     plugins: [
++      ...(command === 'serve' && env.VITE_DEV_ROBINHOOD_WALLET_TRADING === '1' ? [{
++        name: 'robinhood-public-data-readonly',
++        configureServer(server) {
++          server.middlewares.use('/dev-public/robinhood', (req, res, next) => {
++            if (['GET', 'HEAD'].includes(req.method ?? '')) {next(); return;}
++            res.statusCode = 405;
++            res.end('Method not allowed');
++          });
++        },
++      }] : []),
+       networkTransitionHtml(),
+       svgr(),
+       react(),

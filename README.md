@@ -44,13 +44,24 @@ endpoint also responded; no funded user transaction was submitted for this check
 | Application and market data | [Robinhood app](https://robin.callput.app) deployed; [market data](https://app-data-robinhood.s3.ap-southeast-1.amazonaws.com/market-data.json) publishes all 20 assets. The app uses separately operated relay, keeper and indexing services. |
 | Liquidity | The liquidity pool is funded: approximately 9,999 USDG in `poolAmounts` at the checked block. This is pool accounting, not a guarantee of available capacity for an order. |
 
+### Structured Position app integration
+
+[`integrations/structured-position/`](integrations/structured-position/README.md)
+contains the Structured Position frontend extension for the existing CallPut app.
+Its Robinhood-only `/structure` submenu combines stock-token collateral in
+Morpho, USDG financing and CallPut call spreads, with stock-value APR, payoff
+inspection, saved positions and transaction recovery. The package includes the
+feature source, tests and a patch for the host app. It requires the separately
+maintained CallPut frontend; it is not a standalone app or a new vault contract.
+See the package for installation, verification and funded-unwind limitations.
+
 ### Not enabled, pending or outside this repository
 
 | Area | Limitation / remaining work |
 | --- | --- |
 | Additional strategies | Single-leg strategies are disabled. Four-leg token encoding does not imply butterfly/condor trading is implemented. |
 | Rewards and referrals UI | The on-chain Referral contract is deployed; the Rewards interface and redesigned points program are not launched. |
-| Full-stack reproduction | This is a contract-only repository: no frontend, relay/keeper services or automated end-to-end trading runner is included. Use the hosted app for the manual flow below. |
+| Full-stack reproduction | The core repository builds contracts. The Structured Position extension above requires the existing CallPut frontend; the full app, relay/keeper services and automated funded trading runner are not included. Use the hosted app for the manual flow below. |
 | Funded end-to-end verification | Build, deployment and read-only checks are documented. A complete funded deposit → open → close/settle → withdrawal was not performed for this README update. |
 
 **Historical records:** the [manifest](deployments/robinhood-mainnet.json),
@@ -563,7 +574,9 @@ in total. The primary feed remains disabled; `VaultPriceFeed` is configured to u
 [SOURCE.json](SOURCE.json) and the
 [changes since the Giwa snapshot](docs/changes-since-giwa.md).
 
-Frontend, relayer, keeper and deployment tooling are maintained separately.
+The complete frontend, relayer, keeper and deployment tooling are maintained
+separately. The [Structured Position integration](integrations/structured-position/README.md)
+contains only the app extension and its host patch.
 Test utilities included in the source tree are not part of the mainnet deployment.
 
 ## License

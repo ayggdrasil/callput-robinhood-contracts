@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "package": "structured-position",
+  "source": {
+    "repository": "https://github.com/alanxxzero/callput.git",
+    "ref": "main",
+    "baseSha": "1e2166bc3ff8e2aee921dbc41b46b37c4ef3dd7b",
+    "workingTree": "uncommitted source changes at packaging time"
+  },
+  "hostIntegration": {
+    "patch": "host-integration.patch",
+    "patchSha256": "e4cea2930fd5e3e7a1968f376dcf309bd80ddfa561dce3b8ec2d8f66d57a5321",
+    "modifiedFileCount": 25,
+    "files": [
+      {
+        "path": "frontend/.env.example",
+        "oldSha256": "c5307872d8e44d1d84ed4fe2d64e6dabf23afafa274e3451d351ce524ae5ace5",
+        "finalSha256": "0f25e4af100611371e5cfce328c3420013cca5775dab195e3f9dd8c162eecff1"
+      },
+      {
+        "path": "frontend/src/App.tsx",
+        "oldSha256": "8755b168d8bbf8fa382adc83f9146cb7e215ad22766153cdfb89644eec499602",
+        "finalSha256": "2fb6f22dd0dcb76c2e14f54b0582a3523aa24fa8b14fb004e58749c5638e95cc"
+      },
+      {
+        "path": "frontend/src/components/NavBar/AccountInfo/AccountInfo.tsx",
+        "oldSha256": "39225469abd8300895b76372b4f32266c781e4a0e4fb9b2b171c86b1fb943e9d",
+        "finalSha256": "8ab94d2ed947edd2a785b3d2ac1ca37b376b9226bbdad223d484de3219569a6f"
+      },
+      {
+        "path": "frontend/src/components/TradingAccount/AccountSetup.tsx",
+        "oldSha256": "12094c1009dc47121d85a289a562f622051f2ab55c054dfa69d5f767bac83597",
+        "finalSha256": "2170ab7db6fddf934e0b32892893abb249460f40a2d4d61b939553d40cd828da"
+      },
+      {
+        "path": "frontend/src/components/TradingAccount/SponsoredTradingProvider.tsx",
+        "oldSha256": "bcff1f29bf3dd89d45b0eea93902629153ede43cceab642bde07829212e291c1",
+        "finalSha256": "2d5d06b1eca61007b5974f16ac2f249183dc90096dfd4bbe12869f03668da8e7"
+      },
+      {
+        "path": "frontend/src/hooks/useWalletLogout.test.cts",
+        "oldSha256": "950f9e234c4529628484902984dc986ed2e76778a5e31c3c242aef770773bb65",
+        "finalSha256": "d1a5c92a64e45180996fb486b7c2c2c4cc77f5cae448caf4af8fb49562522930"
+      },
+      {
+        "path": "frontend/src/interfaces/interfaces.marketSlice.ts",
+        "oldSha256": "7d5ce58db20cd7fabc94817168dae29dfdf46a039896ffdd7cba953fd966fed3",
+        "finalSha256": "be9575bd8f7f3ab2cdbacc86ae98ccd7c68f0fc6bda2137f5bf9f617c7e60741"
+      },
+      {
+        "path": "frontend/src/networks/configs.ts",
+        "oldSha256": "d2e63b3081d4e2a2cf9917ab363898289d06c9054f10d403377328189ba6f808",
+        "finalSha256": "51bb6b5d3b1b61a06f01c3d0bac814a38911908d3c1b6f4820f5f2cbb173636f"
+      },
+      {
+        "path": "frontend/src/networks/tradingModes.ts",
+        "oldSha256": "11aa92b07ab86f2d35b195df2d528fc5fd6c500ecbbee2ff7187abdf31bedf59",
+        "finalSha256": "5208bd9c157c9f0e1665f7db4c76ae175bf8cce4382e8afd0dcefc321a683b56"
+      },
+      {
+        "path": "frontend/src/store/slices/MarketDaily.test.cts",
+        "oldSha256": "b768ae24fcb45a98debcf189141e341d3552777ad331c273d61c6b25f684a2a8",
+        "finalSha256": "37df1a9b879617e33139fddaeb7828641a7cee2c2c3e3678a39e64f3b376653f"
+      },
+      {
+        "path": "frontend/src/store/slices/MarketSlice.ts",
+        "oldSha256": "9b5d9a267cc21f989bb1996fd689a4bc954c5ef08b12256f6b20bf3000177fa8",
+        "finalSha256": "9ad82351dc65be46c4400697b6a6765aebd10b19cfe5f33193c749376fda0700"
+      },
+      {
+        "path": "frontend/src/store/wagmi.ts",
+        "oldSha256": "be261004ff7afd8364e23a462f97337cf7dec2b42ca351b0a0a56ce8ddce240f",
+        "finalSha256": "74da47ae372c171d1b8893c653cba24d67b6af40c7f12b6a82b73f65062184b0"
+      },
+      {
+        "path": "frontend/src/utils/accountAccessState.test.cts",
+        "oldSha256": "69c3d58151fe44bf237850cb4fea6e478dba638043196ac0d97c7b3acd8de3f4",
+        "finalSha256": "5bb9df6f708a81ca4dc814f50f8b45cf5aa2ba5b887ebc3db3f5f56db3a64fa4"
+      },
+      {
+        "path": "frontend/src/utils/accountAccessState.ts",
+        "oldSha256": "40f26cebaf100fbef791843800b90aeda4daa22964a5af3fc516705ac76df62b",
+        "finalSha256": "f8a552b22134a167d65c9de819057b6c127638f01fe1efc6fb57d7bb4e857538"
+      },
+      {
+        "path": "frontend/src/utils/accountSetupFlow.test.cts",
+        "oldSha256": "0c33ada174d7fd2db9e59478833601ee81419326af91a4d18735efa0d4a68b31",
+        "finalSha256": "6a101bf27de2abb86cefa2c6e21a560396a6c388550b0e039247742c449bac66"
+      },
+      {
+        "path": "frontend/src/utils/accountSetupFlow.ts",
+        "oldSha256": "7bfde8eec90e9ce6649649b83fa6b85781d674ca74391cd1bef2785ae03d318a",
+        "finalSha256": "3a6d7da3a14e69d8ccc1635f90b526d620e5d581775e3e5ed8b2597c4fda190d"
+      },
+      {
+        "path": "frontend/src/utils/contract/base.ts",
+        "oldSha256": "83038eb16d79d2f32d7ba5192b4357ffd4be6f6a0bc1d0d0331e9c3c43180ab5",
+        "finalSha256": "bbf1650190c8bbb65b27ebc5b2986bb1f5d052e6bbf82fca5a4db07375db9753"
+      },
+      {
+        "path": "frontend/src/utils/contract/chainWriteIsolation.test.cts",
+        "oldSha256": "04ce9c0860d77909602bbb090eb112b4ce94f553b06af0be9dd5210f27679c72",
+        "finalSha256": "bc0ade15c5606dfb2be1b2e3053c912beaff3781252a4b46d2fece1f4d46b541"
+      },
+      {
+        "path": "frontend/src/utils/contract/positions.ts",
+        "oldSha256": "6c4b21702b10210ffe2eb36fef7e3a3bcf24ead7c7681a491c3860f4735e65b4",
+        "finalSha256": "fce90205df062400920b4c8ec76ae1361bb40892110bab4c312270d428ca9ac0"
+      },
+      {
+        "path": "frontend/src/utils/ownerLoginPolicy.test.cts",
+        "oldSha256": "183d1fc5f39cc2859c256cb1d76b33d3508e54f15d9dcc032f9fdac45001e813",
+        "finalSha256": "330d10e81785912f85441e2315eb69fb725a95f1d0d770587071e183b2a7d0ff"
+      },
+      {
+        "path": "frontend/src/utils/ownerLoginPolicy.ts",
+        "oldSha256": "7e1b38a41f13e3560e533f361f3631ed3b501d1c35414b194bf475401aba500c",
+        "finalSha256": "65ca3e99bd72bf8f8e18e8d17ef82677b213c9abff2b8e7a3876b075bb1f6916"
+      },
+      {
+        "path": "frontend/src/utils/sponsoredOrderEntry.test.cts",
+        "oldSha256": "15b79403e6dd4ffeaf5bae4aa5cf8c395a94fb78e81adbff5c870d105bbf7de5",
+        "finalSha256": "f53d4de598d5bd6130939d30e956d505a9385db093bca019cd21e99d4fa77b31"
+      },
+      {
+        "path": "frontend/src/utils/sponsoredOrderEntry.ts",
+        "oldSha256": "d288d471a8a636dd5d40725bbe8adc5d6e0458c25835571e6b18de3a1cdb1516",
+        "finalSha256": "a0b1bb6f11c3dae09aee708f9f19e8363ecec1e04773a3d5dd88381c3b788eca"
+      },
+      {
+        "path": "frontend/src/utils/tradingModeChoice.test.cts",
+        "oldSha256": "186db7712d1416bcf1d01794bf4b153554b36e4f673e0dce0b2e9b56f147486b",
+        "finalSha256": "473381900beff4aea17e40f8b637363598e1096529c35a77f9aabda4d2d19f43"
+      },
+      {
+        "path": "frontend/vite.config.ts",
+        "oldSha256": "4c9d09a8d2319076ac0f21bd82c5ab8f7ae7d8629fa2112fdf7ff846fa76a470",
+        "finalSha256": "3100e82b595468b803d45192ab8f3a76047ab2543642f02a5c1add4631c5b16a"
+      }
+    ]
+  },
+  "newModules": {
+    "fileCount": 39,
+    "files": {
+      "src/assets/logo-morpho.svg": "bedcd83a0175de29e80f0ea1838afbb5cafc303aa429827e7f26b88708216183",
+      "src/networks/stockIncome.ts": "a71f83db8926449a6d1080d52111ecd21ae40277179cf3b173a96e0bc80c7d5a",
+      "src/pages/Structure.css": "5175cf35b2259065c30de52ea8c4574a3d6329d0f4e05cb60fb916722b0d2ecd",
+      "src/pages/Structure.tsx": "af3dd0dcbab48fc0a37a5fe4e37ce6ed20e93bf1bc142ee8c1a1d6ea591cb04d",
+      "src/pages/StructureExample.tsx": "457fa42f10e4f9784096f472a2b38f53a0c09da508bde11318115bafc4d670f6",
+      "src/pages/StructurePanels.test.cts": "a6621629a84add1755987941fc5031de52524eb85cbfa48f5ccda4e4dee3631a",
+      "src/pages/StructurePanels.tsx": "eaaa3f9912d7eccbda4991b9da31316828b86b5594cff5302ff9014788881434",
+      "src/pages/StructurePayoff.test.cts": "eb99362423da70b6f627079df8ff27f3c401f6a160a56a1d6088cd697099c642",
+      "src/pages/StructurePayoff.tsx": "630918673d1bd86d5edb264042a2a58a706af87593dcba7b1b9cd9cd75a50623",
+      "src/pages/StructureProgress.test.cts": "e5a4cc8532367cab1fac3cf7721fcb1613a65c5f0df1ca2ecb45b20de751ed2b",
+      "src/pages/StructureProgress.tsx": "574b0ba9bc83d7562d5fd1ca786fe254fd49e0240f6031a5b3b8c473565dffcf",
+      "src/pages/StructureStockLogo.tsx": "42113073aa66407cf3a5e7cab42481eed69ff558c3656890dddd9901d62b59f2",
+      "src/pages/StructureVault.css": "b38e09a35295d57e90326ee8c7df7655fe879988bbf93b41d08df2ec82756581",
+      "src/pages/StructureWalletMode.test.cts": "5455023331dab87ca18787c4663a17070dc8d9fb25e83d16be36f1cca424de19",
+      "src/structure/exampleIncome.ts": "5fead6d23058f9675353f3cb663cbc55aae6cc320d2016af5e07e0963c5d27a5",
+      "src/structure/execution.test.cts": "313f25df4798a1ab8cc35547753e5a6730243eb15de8fc5036d0cfba5dffd493",
+      "src/structure/execution.ts": "17628d2d637b023cb6145427a57937f3ce2f98d57cae62c7ba0a5fa7c59d731e",
+      "src/structure/incomeProjection.test.cts": "e3b95c6fe5bc026804c5108de372db100d73c477b69b56f4a62eb67c03754dc5",
+      "src/structure/incomeProjection.ts": "294f678903e6e63cb73c0a43203eba0f81a8b55fb6d185434dacf33b3d6bfebc",
+      "src/structure/morpho.test.cts": "2dc66fbb09c8ca97364996f7d91dad4b25a885a48050955603ed8bd7b55fdf63",
+      "src/structure/morpho.ts": "bb605b78faf72ace5b8caceca88198adcbdabee271795977e6d9cb6b3906a8ed",
+      "src/structure/policy.test.cts": "927fe345cdd5e834484d4ffac313be281fb287f68c13d3bdb9e2e418a95e0a7c",
+      "src/structure/policy.ts": "93011416dc5eaaaac39182ad377c7df7f673fca43eb37ad3b283fd390f0ab541",
+      "src/structure/positionIncome.test.cts": "eee5bc406b2de1479ed3630045e4dce59cd3d36232b06a5c6148fe29afc0bf93",
+      "src/structure/positionIncome.ts": "7691dc5617323239806407b4a3959c269dd43ceec8babe42df0992d43fbfb32b",
+      "src/structure/quote.test.cts": "0781240440aa379d33a3f132208d9039c0a9699823eb6b4956112700cc98f6b9",
+      "src/structure/quote.ts": "bd0187a84977f5487b7e8b5fabe58c604c15f8dab17d785cb5f9fa728f2fe88a",
+      "src/structure/recovery.test.cts": "14260eedf9adca0b0c1e14f887e9828b560e27724d24d281f7a22e7434946563",
+      "src/structure/recovery.ts": "e112b6e31e84f24a0522ef613bd235e3839e9813a7ff24f90978a7069807897d",
+      "src/structure/strategy.test.cts": "f5dada4a854953e84aac779a9e83b8b5769a0e596eac0e1ba3f671a6b30ad2b1",
+      "src/structure/strategy.ts": "aca45ccdfc551e2bf4083fad29b4c7785fc3e3fc11eca5df3eba15fc50f093f9",
+      "src/structure/useStockIncome.ts": "d3de0a1f5f60846d77055a8b45b868e66e6eb4629eb3e196f1823404d3c6609b",
+      "src/structure/wallet.test.cts": "e90c50f51bde3155bd6381ebee767efc1272f6bed139a8a38a9a4bbd4e47e4fb",
+      "src/structure/wallet.ts": "ee877c1b56b0b87bce2f487c496b7efcf8e637b5b7e77a14401e19f674c9804e",
+      "src/structure/walletOrder.test.cts": "9f2e825aa27dd526c288e95d18b0f10b29cfc63fcfdfc221a5457eae05b86a03",
+      "src/structure/walletOrder.ts": "79bdf8ec54999d2d5a8c3b1fe0b5067a3ece5444b75bd788fcbd6e081013a8f7",
+      "src/structure/workflow.test.cts": "155defad79e54763169fafc54fa411eb4cc718e4e8f158cd1219c99bcc415d3b",
+      "src/structure/workflow.ts": "24ba68b4742caacf6e631ec145b4685e21172e9f046785cba45876037fc6bb9f",
+      "src/utils/transactionAttribution.ts": "cf297d96617ea5666a152098ca81170b178dffd7630862114b146b9c92a4c3dd"
+    }
+  },
+  "exclusions": [
+    "frontend/tsconfig.node.tsbuildinfo",
+    "frontend/.env*",
+    "runtime state",
+    "docs",
+    "plans",
+    "absolute local paths",
+    "personal wallet data"
+  ]
+}
